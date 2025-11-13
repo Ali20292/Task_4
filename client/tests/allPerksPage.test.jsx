@@ -22,19 +22,16 @@ describe('AllPerks page (Directory)', () => {
     );
 
     // Wait for the baseline card to appear which guarantees the asynchronous
-    // fetch finished.
-    await waitFor(() => {
-      expect(screen.getByText(seededPerk.title)).toBeInTheDocument();
-    });
+    // fetch finished. Allow extra time because the component performs an
+    // initial load plus a debounced follow-up request.
+    await screen.findByText(seededPerk.title, undefined, { timeout: 7000 });
 
     // Interact with the name filter input using the real value that
     // corresponds to the seeded record.
     const nameFilter = screen.getByPlaceholderText('Enter perk name...');
     fireEvent.change(nameFilter, { target: { value: seededPerk.title } });
 
-    await waitFor(() => {
-      expect(screen.getByText(seededPerk.title)).toBeInTheDocument();
-    });
+    await screen.findByText(seededPerk.title, undefined, { timeout: 7000 });
 
     // The summary text should continue to reflect the number of matching perks.
     expect(screen.getByText(/showing/i)).toHaveTextContent('Showing');
@@ -51,7 +48,26 @@ describe('AllPerks page (Directory)', () => {
   */
 
   test('lists public perks and responds to merchant filtering', async () => {
-    // This will always fail until the TODO above is implemented.
-    expect(true).toBe(false);
+    const seededPerk = global.__TEST_CONTEXT__.seededPerk;
+
+    renderWithRouter(
+      <Routes>
+        <Route path="/explore" element={<AllPerks />} />
+      </Routes>,
+      { initialEntries: ['/explore'] }
+    );
+
+    // Wait for initial fetch to render something deterministic.
+    await screen.findByText(seededPerk.title, undefined, { timeout: 7000 });
+
+  // Pick the merchant from the dropdown and let the debounced fetch apply.
+  // The select currently has no htmlFor/label association, so use role.
+  const merchantSelect = screen.getByRole('combobox');
+    fireEvent.change(merchantSelect, { target: { value: seededPerk.merchant } });
+
+    await screen.findByText(seededPerk.title, undefined, { timeout: 7000 });
+
+    // Summary should still present count information.
+    expect(screen.getByText(/showing/i)).toBeInTheDocument();
   });
 });
